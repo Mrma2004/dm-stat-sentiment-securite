@@ -1,0 +1,314 @@
+############################################################
+# Script : DM_stat.R
+# Objectif : Étudier le sentiment de sécurité en France
+# Données : ESS vague 9
+# Autrices : Claudia Aguado, Mariama Mangane
+# Date : 2025-12
+############################################################
+
+
+# ----------------------------------------------------------
+# 1. Préparation de l’environnement
+# ----------------------------------------------------------
+
+rm(list = ls())             # Vider l'environnement
+
+# Chargement des packages nécessaires
+install.packages("survey")
+library(survey)
+library(data.table)
+library(utils)
+
+# Reproductibilité
+set.seed(123)
+
+
+# ----------------------------------------------------------
+# 2. Importation et préparation des données
+# ----------------------------------------------------------
+
+ess <- read.csv("Downloads/ESS9e03_2.csv", sep = ",", dec = ".")
+
+
+ess <- ess[, c("aesfdrk", "crmvct", "gndr", "domicil", "cntry", "pspwght")]
+
+# Sous-sélection : France seulement
+essf <- ess[ess$cntry == "FR", ]
+
+
+# Aperçu des données
+dim(essf)
+str(essf)
+summary(essf)
+head(essf, 10)
+tail(essf, 10)
+
+
+# ----------------------------------------------------------
+# 3. Statistiques descriptives (tableaux)
+# ----------------------------------------------------------
+
+# Effectifs bruts
+table(essf$aesfdrk)   # sentiment de sécurité
+table(essf$crmvct)    # victimisation
+table(essf$gndr)      # genre
+table(essf$domicil)   # lieu de résidence
+
+# Proportions
+prop.table(table(essf$aesfdrk))
+prop.table(table(essf$crmvct))
+prop.table(table(essf$gndr))
+prop.table(table(essf$domicil))
+
+
+# ----------------------------------------------------------
+# 4. Nettoyage des données
+# ----------------------------------------------------------
+
+# Suppression des modalités non pertinentes(ceux qui n'ont pas répondu)
+essf$aesfdrk[essf$aesfdrk %in% c(7, 8)] <- NA
+essf$domicil[essf$domicil == 8] <- NA
+
+# Vérification des valeurs manquantes
+colSums(is.na(essf))
+
+
+# ----------------------------------------------------------
+# 5. Recodage des variables
+# ----------------------------------------------------------
+
+essf2 <- essf
+
+# Sentiment de sécurité (une variable qualitative ordinale)
+essf2$Safety <- factor(
+  essf2$aesfdrk,
+  levels = 1:4,
+  labels = c("Very safe", "Safe", "Unsafe", "Very unsafe"),
+  ordered = TRUE
+)
+
+# Victimisation (une variable qualitative nominale)
+essf2$Victime <- factor(
+  essf2$crmvct,
+  levels = c(1, 2),
+  labels = c("Victim", "Not victim")
+)
+
+# Genre (une variable qualitative nominale)
+essf2$Gender <- factor(
+  essf2$gndr,
+  levels = c(1, 2),
+  labels = c("Men", "Women")
+)
+
+# Lieu de résidence (une variable qualitative ordinale)
+essf2$Domicil <- factor(
+  essf2$domicil,
+  levels = 1:5,
+  labels = c(
+    "Big city",
+    "Suburbs of big city",
+    "Town or small city",
+    "Country village",
+    "Farm or home in countryside"
+  )
+)
+
+
+# ----------------------------------------------------------
+# 6. Tableaux croisés pondérés
+# ----------------------------------------------------------
+
+design <- svydesign(
+  ids = ~1,
+  weights = ~pspwght,
+  data = essf2
+)
+
+# Sentiment de sécurité global
+svytable(~Safety, design)
+prop.table(svytable(~Safety, design))
+
+# Victimisation × sentiment de sécurité
+svytable(~Victime + Safety, design)
+prop.table(svytable(~Victime + Safety, design))
+
+# Genre × sentiment de sécurité
+svytable(~Gender + Safety, design)
+prop.table(svytable(~Gender + Safety, design))
+
+# Lieu × sentiment de sécurité
+svytable(~Domicil + Safety, design)
+prop.table(svytable(~Domicil + Safety, design))
+
+
+# ----------------------------------------------------------
+# 7. Visualisations (export en PNG)
+# ----------------------------------------------------------
+
+# --- 7.0 Victimisation selon le lieu ---
+tab_victime_safety <- prop.table(
+  table(essf2$Victime, essf2$Safety),
+  margin = 1
+)
+
+
+png("C:/Users/marim/OneDrive/Documents/Cours/A DM STAT/victimisation_sentiment_securite.png",
+    width = 900, height = 600)
+
+barplot(
+  t(tab_victime_safety),              # transpose pour avoir Safety en x
+  beside = TRUE,
+  col = c("darkseagreen3", "khaki2", "orange2", "firebrick2"),
+  main = "Sentiment de sécurité selon la victimisation",
+  xlab = "Statut de victimisation",
+  ylab = "Proportion",
+  ylim = c(0, 0.6)
+)
+
+legend(
+  "topright",
+  legend = colnames(tab_victime_safety),
+  fill = c("darkseagreen3", "khaki2", "orange2", "firebrick2"),
+  title = "Sentiment de sécurité"
+)
+
+dev.off()
+# --- 7.1 Distribution du sentiment de sécurité ---
+
+
+tab_victime_safety <- prop.table(
+  table(essf2$Victime, essf2$Safety),
+  margin = 1
+)
+
+png("C:/Users/marim/OneDrive/Documents/Cours/A DM STAT/safety_distribution.png", width = 800, height = 600)
+
+barplot(
+  table(essf2$Safety),
+  col = "gold",
+  main = "Distribution du sentiment de sécurité en France",
+  xlab = "Sentiment de sécurité la nuit",
+  ylab = "Effectif"
+)
+
+dev.off()
+
+
+# --- 7.2 Victimisation × sentiment de sécurité ---
+
+tab_victime <- prop.table(
+  table(essf2$Victime, essf2$Safety),
+  margin = 1
+)
+
+png("C:/Users/marim/OneDrive/Documents/Cours/A DM STAT/safety_by_victimisation.png", width = 800, height = 600)
+
+barplot(
+  tab_victime,
+  beside = TRUE,
+  col = c("lightblue", "orange"),
+  ylim = c(0, 1),
+  ylab = "Proportion",
+  xlab = "Sentiment de sécurité",
+  main = "Sentiment de sécurité selon la victimisation"
+)
+
+legend(
+  "topright",
+  legend = rownames(tab_victime),
+  fill = c("lightblue", "orange"),
+  bty = "n"
+)
+
+dev.off()
+
+
+# --- 7.3 Genre × sentiment de sécurité ---
+
+tab_genre <- prop.table(
+  table(essf2$Gender, essf2$Safety),
+  margin = 1
+)
+
+png("C:/Users/marim/OneDrive/Documents/Cours/A DM STAT/safety_by_gender.png", width = 800, height = 600)
+
+barplot(
+  tab_genre,
+  beside = TRUE,
+  col = c("skyblue", "pink"),
+  ylim = c(0, 1),
+  ylab = "Proportion",
+  xlab = "Sentiment de sécurité",
+  main = "Sentiment de sécurité selon le genre"
+)
+
+legend(
+  "topright",
+  legend = rownames(tab_genre),
+  fill = c("skyblue", "pink"),
+  bty = "n"
+)
+
+dev.off()
+
+
+# --- 7.4 Lieu de résidence × sentiment de sécurité ---
+
+tab_domicil <- prop.table(
+  table(essf2$Domicil, essf2$Safety),
+  margin = 1
+)
+
+png("C:/Users/marim/OneDrive/Documents/Cours/A DM STAT/safety_by_residence.png", width = 900, height = 600)
+
+barplot(
+  tab_domicil,
+  beside = TRUE,
+  col = rainbow(nrow(tab_domicil)),
+  ylim = c(0, 1),
+  ylab = "Proportion",
+  xlab = "Sentiment de sécurité",
+  main = "Sentiment de sécurité selon le lieu de résidence",
+  las = 2
+)
+
+legend(
+  "topright",
+  legend = rownames(tab_domicil),
+  fill = rainbow(nrow(tab_domicil)),
+  cex = 0.8,
+  bty = "n"
+)
+
+dev.off()
+
+# --- 7.4 Victimisation x Lieu de résidence---
+tab_victime_domicil <- prop.table(
+  table(essf2$Domicil, essf2$Victime),
+  margin = 1
+)
+
+
+png("C:/Users/marim/OneDrive/Documents/Cours/A DM STAT/victimisation_lieu_residence.png",
+    width = 1000, height = 600)
+
+barplot(
+  t(tab_victime_domicil),     # transposer pour avoir Victime en x
+  beside = TRUE,
+  col = c("firebrick2", "steelblue3"),
+  main = "Victimisation selon le lieu de résidence",
+  xlab = "Lieu de résidence",
+  ylab = "Proportion",
+  ylim = c(0, 0.9),
+  las = 2                     # labels verticaux pour la lisibilité
+)
+
+legend(
+  "topright",
+  legend = c("Victim", "Not victim"),
+  fill = c("firebrick2", "steelblue3"),
+  title = "Statut"
+)
+
+dev.off()

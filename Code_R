@@ -30,7 +30,7 @@ set.seed(123)
 ess <- read.csv("Downloads/ESS9e03_2.csv", sep = ",", dec = ".")
 
 
-ess <- ess[, c("aesfdrk", "crmvct", "gndr", "domicil", "cntry", "pspwght")]
+ess <- ess[, c("aesfdrk", "crmvct", "gndr", "domicil","agea", "cntry", "pspwght")]
 
 # Sous-sélection : France seulement
 essf <- ess[ess$cntry == "FR", ]
@@ -124,6 +124,21 @@ design <- svydesign(
   weights = ~pspwght,
   data = essf2
 )
+# Répartition par genre
+svytable(~Gender, design)
+prop.table(svytable(~Gender, design))
+
+# Répartition par lieu de résidence
+svytable(~Domicil, design)
+prop.table(svytable(~Domicil, design))
+
+# Victimisation globale
+svytable(~Victime, design)
+prop.table(svytable(~Victime, design))
+
+# Victimisation selon le genre
+svytable(~Victime + Gender, design)
+prop.table(svytable(~Victime + Gender, design), margin = 2)
 
 # Sentiment de sécurité global
 svytable(~Safety, design)
@@ -174,6 +189,7 @@ legend(
 )
 
 dev.off()
+
 # --- 7.1 Distribution du sentiment de sécurité ---
 
 
@@ -283,7 +299,7 @@ legend(
 
 dev.off()
 
-# --- 7.4 Victimisation x Lieu de résidence---
+# --- 7.5 Victimisation x Lieu de résidence---
 tab_victime_domicil <- prop.table(
   table(essf2$Domicil, essf2$Victime),
   margin = 1
@@ -294,14 +310,14 @@ png("C:/Users/marim/OneDrive/Documents/Cours/A DM STAT/victimisation_lieu_reside
     width = 1000, height = 600)
 
 barplot(
-  t(tab_victime_domicil),     # transposer pour avoir Victime en x
+  t(tab_victime_domicil),     # transpose pour avoir Victime en x
   beside = TRUE,
   col = c("firebrick2", "steelblue3"),
   main = "Victimisation selon le lieu de résidence",
   xlab = "Lieu de résidence",
   ylab = "Proportion",
   ylim = c(0, 0.9),
-  las = 2                     # labels verticaux pour la lisibilité
+  las = 2                     # labels verticaux pour lisibilité
 )
 
 legend(
@@ -312,3 +328,52 @@ legend(
 )
 
 dev.off()
+
+# --- 7.6 Victimisation x Age---
+
+essf3 <- essf2[essf2$gndr == 2, ]
+#Vérifier s'il y a des ages non renseignés
+sum(is.na(essf3$agea))
+#Début des intervalles
+min(essf3$agea)
+essf3$agea <- as.numeric(as.character(essf3$agea))
+#Faire des catégories à partir de l'age
+essf2$AgeGroup <- cut(
+  essf3$agea,
+  breaks = c(15, 29, 40, 60, Inf),
+  labels = c("15-29 ans", "30-40 ans", "41-60 ans", "+ de 60 ans"),
+  include.lowest = TRUE
+)
+table(essf3$AgeGroup)
+essf3$aesfdrk[essf3$aesfdrk %in% c(7, 8,9)] <- NA
+design <- svydesign(
+  ids = ~1, 
+  weights = ~pspwght, 
+  data = essf3
+)
+design_femmes <- subset(design, gndr == 2)
+
+
+tab_femmes_age <- prop.table(
+  svytable(~AgeGroup + aesfdrk, design_femmes), 
+  margin = 1
+)
+tab_femmes_age
+# Affichage
+print(round(tab_femmes_age * 100, 1))
+couleurs <- c("#D1E8E2", "#A9D18E", "#F4B084", "#C00000")
+
+#png("insecurite_femmes_age.png", width = 1000, height = 700)
+
+#barplot dinsecurite selon l'age
+barplot(
+  t(tab_femmes_age), 
+  beside = TRUE, 
+  col = couleurs,
+  main = "Sentiment d'insécurité chez les femmes selon l'âge (Données pondérées)",
+  xlab = "Tranches d'âge",
+  ylab = "Proportion (%)",
+  ylim = c(0, 0.5),
+  legend.text = c("Very safe", "Safe", "Unsafe", "Very unsafe"),
+  args.legend = list(x = "topright", bty = "n")
+)

@@ -161,55 +161,35 @@ prop.table(svytable(~Domicil + Safety, design))
 # 7. Visualisations (export en PNG)
 # ----------------------------------------------------------
 
-# --- 7.0 Victimisation selon le lieu ---
-tab_victime_safety <- prop.table(
-  table(essf2$Victime, essf2$Safety),
+# --- 7.1 Victimisation x Lieu de résidence---
+tab_victime_domicil <- prop.table(
+  table(essf2$Domicil, essf2$Victime),
   margin = 1
 )
 
 
-png("C:/Users/marim/OneDrive/Documents/Cours/A DM STAT/victimisation_sentiment_securite.png",
-    width = 900, height = 600)
+png("C:/Users/marim/OneDrive/Documents/Cours/A DM STAT/victimisation_lieu_residence.png",
+    width = 1000, height = 600)
 
 barplot(
-  t(tab_victime_safety),              # transpose pour avoir Safety en x
+  t(tab_victime_domicil),     
   beside = TRUE,
-  col = c("darkseagreen3", "khaki2", "orange2", "firebrick2"),
-  main = "Sentiment de sécurité selon la victimisation",
-  xlab = "Statut de victimisation",
+  col = c("firebrick2", "steelblue3"),
+  main = "Victimisation selon le lieu de résidence",
+  xlab = "Lieu de résidence",
   ylab = "Proportion",
-  ylim = c(0, 0.6)
+  ylim = c(0, 0.9),
+  las = 2                     # veut dire labels verticaux pour lisibilité
 )
 
 legend(
   "topright",
-  legend = colnames(tab_victime_safety),
-  fill = c("darkseagreen3", "khaki2", "orange2", "firebrick2"),
-  title = "Sentiment de sécurité"
+  legend = c("Victim", "Not victim"),
+  fill = c("firebrick2", "steelblue3"),
+  title = "Statut"
 )
 
 dev.off()
-
-# --- 7.1 Distribution du sentiment de sécurité ---
-
-
-tab_victime_safety <- prop.table(
-  table(essf2$Victime, essf2$Safety),
-  margin = 1
-)
-
-png("C:/Users/marim/OneDrive/Documents/Cours/A DM STAT/safety_distribution.png", width = 800, height = 600)
-
-barplot(
-  table(essf2$Safety),
-  col = "gold",
-  main = "Distribution du sentiment de sécurité en France",
-  xlab = "Sentiment de sécurité la nuit",
-  ylab = "Effectif"
-)
-
-dev.off()
-
 
 # --- 7.2 Victimisation × sentiment de sécurité ---
 
@@ -239,7 +219,6 @@ legend(
 
 dev.off()
 
-
 # --- 7.3 Genre × sentiment de sécurité ---
 
 tab_genre <- prop.table(
@@ -264,6 +243,28 @@ legend(
   legend = rownames(tab_genre),
   fill = c("skyblue", "pink"),
   bty = "n"
+)
+
+dev.off()
+
+
+
+# --- 7.1 Distribution du sentiment de sécurité ---
+
+
+tab_victime_safety <- prop.table(
+  table(essf2$Victime, essf2$Safety),
+  margin = 1
+)
+
+png("C:/Users/marim/OneDrive/Documents/Cours/A DM STAT/safety_distribution.png", width = 800, height = 600)
+
+barplot(
+  table(essf2$Safety),
+  col = "gold",
+  main = "Distribution du sentiment de sécurité en France",
+  xlab = "Sentiment de sécurité la nuit",
+  ylab = "Effectif"
 )
 
 dev.off()
@@ -299,37 +300,10 @@ legend(
 
 dev.off()
 
-# --- 7.5 Victimisation x Lieu de résidence---
-tab_victime_domicil <- prop.table(
-  table(essf2$Domicil, essf2$Victime),
-  margin = 1
-)
 
-
-png("C:/Users/marim/OneDrive/Documents/Cours/A DM STAT/victimisation_lieu_residence.png",
-    width = 1000, height = 600)
-
-barplot(
-  t(tab_victime_domicil),     # transpose pour avoir Victime en x
-  beside = TRUE,
-  col = c("firebrick2", "steelblue3"),
-  main = "Victimisation selon le lieu de résidence",
-  xlab = "Lieu de résidence",
-  ylab = "Proportion",
-  ylim = c(0, 0.9),
-  las = 2                     # labels verticaux pour lisibilité
-)
-
-legend(
-  "topright",
-  legend = c("Victim", "Not victim"),
-  fill = c("firebrick2", "steelblue3"),
-  title = "Statut"
-)
-
-dev.off()
-
-# --- 7.6 Victimisation x Age---
+# ----------------------------------------------------------
+# 8. Zoom sur l'âge (Pour les femmes)
+# ----------------------------------------------------------
 
 essf3 <- essf2[essf2$gndr == 2, ]
 #Vérifier s'il y a des ages non renseignés
@@ -363,7 +337,7 @@ tab_femmes_age
 print(round(tab_femmes_age * 100, 1))
 couleurs <- c("#D1E8E2", "#A9D18E", "#F4B084", "#C00000")
 
-#png("insecurite_femmes_age.png", width = 1000, height = 700)
+png("insecurite_femmes_age.png", width = 1000, height = 700)
 
 #barplot dinsecurite selon l'age
 barplot(
